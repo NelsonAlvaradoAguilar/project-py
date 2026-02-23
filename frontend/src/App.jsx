@@ -1,19 +1,15 @@
-import { use, useState } from "react";
-
-import viteLogo from "/vite.svg";
-import "./App.scss";
-import { getPeople } from "./api/api";
+import React from "react"; // ✅ Required for some setups
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import PeopleList from "./components/PeopleList/PeopleList";
-import { Routes, Route, BrowserRouter } from "react-router-dom";
+import "./App.scss";
+
 function App() {
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<PeopleList />} />
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<PeopleList />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
