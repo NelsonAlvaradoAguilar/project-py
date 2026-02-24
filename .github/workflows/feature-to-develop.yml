@@ -2,7 +2,8 @@ name: Feature -> Develop (auto PR + auto-merge)
 
 on:
   push:
-    branches: ["feature/**"]
+    branches:
+      - 'feature/**'
 
 concurrency:
   group: feature-${{ github.ref }}
@@ -20,7 +21,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
+          cache: pip
       - run: pip install -r requirements.txt
       - run: pytest
 
@@ -35,27 +36,28 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: develop
           head: ${{ github.ref_name }}
-          branch: bot/${{ github.ref_name }}-to-develop
-          title: "Auto PR: ${{ github.ref_name }} -> develop"
-          body: "Auto-created after tests passed."
+          branch: bot/${{ github.ref_name }}-to-develop-${{ github.run_id }}
+          title: Auto PR: ${{ github.ref_name }} -> develop
+          body: Auto-created after tests passed.
 
-      - name: Enable auto-merge (squash) for PR to develop
+      - name: Enable auto-merge (squash)
         if: steps.cpr.outputs.pull-request-number != ''
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const prNumber = Number('${{ steps.cpr.outputs.pull-request-number }}');
-
             const pr = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: prNumber
             });
-
             await github.graphql(`
               mutation($prId: ID!) {
-                enablePullRequestAutoMerge(input: {pullRequestId: $prId, mergeMethod: SQUASH}) {
+                enablePullRequestAutoMerge(input: {
+                  pullRequestId: $prId,
+                  mergeMethod: SQUASH
+                }) {
                   pullRequest { number }
                 }
               }
