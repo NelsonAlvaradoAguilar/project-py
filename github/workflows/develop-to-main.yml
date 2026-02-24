@@ -1,9 +1,13 @@
-name: Develop -> Main (create PR only)
-#testing again
+name: Feature -> Develop (auto PR + auto-merge)
+
 on:
   push:
     branches:
-      - develop
+      - 'feature/**'
+
+concurrency:
+  group: feature-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -12,7 +16,6 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -24,17 +27,40 @@ jobs:
       - run: pip install -r requirements.txt
       - run: pytest
 
-  create-pr:
+  pr-and-automerge:
     needs: test
     runs-on: ubuntu-latest
-
     steps:
-      - name: Create/Update PR develop -> main
+      - name: Create/Update PR to develop
+        id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          base: main
-          head: develop
-          branch: bot/develop-to-main
-          title: Promote develop -> main
-          body: Auto-created after develop passed tests. Manual merge only.
+          base: develop
+          head: ${{ github.ref_name }}
+          branch: bot/${{ github.ref_name }}-to-develop
+          title: Auto PR: ${{ github.ref_name }} -> develop
+          body: Auto-created after tests passed.
+
+      - name: Enable auto-merge (squash)
+        if: steps.cpr.outputs.pull-request-number != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = Number('${{ steps.cpr.outputs.pull-request-number }}');
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            await github.graphql(`
+              mutation($prId: ID!) {
+                enablePullRequestAutoMerge(input: {
+                  pullRequestId: $prId,
+                  mergeMethod: SQUASH
+                }) {
+                  pullRequest { number }
+                }
+              }
+            `, { prId: pr.data.node_id });
