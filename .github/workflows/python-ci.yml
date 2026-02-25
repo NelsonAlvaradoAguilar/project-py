@@ -1,12 +1,10 @@
-name: Python CI - Feature New
+name: Python CI & Auto Merge
 
 on:
   push:
     branches:
       - feature/new # Trigger on feature branch
-  pull_request:
-    branches:
-      - develop # Optional for PRs to develop
+      - develop # Trigger on develop for main PR
 
 jobs:
   test-and-merge:
@@ -16,7 +14,7 @@ jobs:
         python-version: [3.12]
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -32,27 +30,40 @@ jobs:
       - name: Run tests
         run: pytest
 
-      - name: Auto merge feature/new into develop
+      # --- Feature → Develop ---
+      - name: Create PR feature/new → develop
         if: success() && github.ref == 'refs/heads/feature/new'
-        uses: devops-infra/action-pull-request@v0.5.5
+        uses: peter-evans/create-pull-request@v5
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          source_branch: feature/new
-          target_branch: develop
-          pr_title: "Auto merge feature/new → develop"
-          pr_body: "This PR was created automatically after passing tests."
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: feature/new
+          base: develop
+          title: "Auto merge feature/new → develop"
+          body: "This PR was created automatically after passing tests."
+          draft: false
 
-      - name: Run tests on develop → main PR
-        if: success() && github.ref == 'refs/heads/develop'
-        run: |
-          echo "Tests passed on develop. Ready to merge into main."
-
-      - name: Auto merge develop into main
-        if: success() && github.ref == 'refs/heads/develop'
-        uses: devops-infra/action-pull-request@v0.5.5
+      - name: Enable Auto-Merge feature/new → develop
+        if: success() && github.ref == 'refs/heads/feature/new'
+        uses: peter-evans/enable-pull-request-automerge@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          source_branch: develop
-          target_branch: main
-          pr_title: "Auto merge develop → main"
-          pr_body: "This PR was created automatically after passing tests."
+          token: ${{ secrets.GITHUB_TOKEN }}
+          merge-method: squash
+
+      # --- Develop → Main ---
+      - name: Create PR develop → main
+        if: success() && github.ref == 'refs/heads/develop'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: develop
+          base: main
+          title: "Auto merge develop → main"
+          body: "This PR was created automatically after passing tests."
+          draft: false
+
+      - name: Enable Auto-Merge develop → main
+        if: success() && github.ref == 'refs/heads/develop'
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          merge-method: squash
