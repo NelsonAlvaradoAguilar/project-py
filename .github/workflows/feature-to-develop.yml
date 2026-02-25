@@ -1,45 +1,51 @@
-name: Feature -> Develop (auto PR + auto-merge)
+name: Feature -> Develop (auto-merge)
 
 on:
   push:
-    branches: ["feature/**"]
+    branches:
+      - 'feature'
+      - 'feature/**'
 
 concurrency:
   group: feature-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
+          cache: pip
+
       - run: pip install -r requirements.txt
       - run: pytest
 
-  pr-and-automerge:
+  create-pr-and-automerge:
     needs: test
     runs-on: ubuntu-latest
+
     steps:
-      - name: Create/Update PR to develop
+      - name: Create PR from feature -> develop
         id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: develop
           head: ${{ github.ref_name }}
-          branch: bot/${{ github.ref_name }}-to-develop
-          title: "Auto PR: ${{ github.ref_name }} -> develop"
-          body: "Auto-created after tests passed."
+          branch: bot/${{ github.ref_name }}-to-develop-${{ github.run_id }}
+          title: Auto PR: ${{ github.ref_name }} -> develop
+          body: Auto-created after tests passed.
 
-      - name: Enable auto-merge (squash) for PR to develop
+      - name: Enable auto-merge (squash)
         if: steps.cpr.outputs.pull-request-number != ''
         uses: actions/github-script@v7
         with:
@@ -55,7 +61,10 @@ jobs:
 
             await github.graphql(`
               mutation($prId: ID!) {
-                enablePullRequestAutoMerge(input: {pullRequestId: $prId, mergeMethod: SQUASH}) {
+                enablePullRequestAutoMerge(input: {
+                  pullRequestId: $prId,
+                  mergeMethod: SQUASH
+                }) {
                   pullRequest { number }
                 }
               }
