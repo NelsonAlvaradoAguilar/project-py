@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
+          cache: pip
       - run: pip install -r requirements.txt
       - run: pytest
 
@@ -34,10 +34,10 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: develop
-          head: ${{ github.ref_name }}
           branch: bot/${{ github.ref_name }}-to-develop-${{ github.run_id }}
           title: "Auto PR: ${{ github.ref_name }} -> develop"
           body: "Auto-created after tests passed."
+          commit-message: "chore: auto PR from feature -> develop"
 
       - name: Enable auto-merge (squash) for PR to develop
         if: steps.cpr.outputs.pull-request-number != ''
