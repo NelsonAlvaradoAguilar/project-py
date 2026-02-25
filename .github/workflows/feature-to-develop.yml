@@ -1,10 +1,8 @@
-name: Feature -> Develop (auto-merge)
+name: Feature -> Develop (auto PR + auto-merge)
 
 on:
   push:
-    branches:
-      - 'feature'
-      - 'feature/**'
+    branches: ["feature/**"]
 
 concurrency:
   group: feature-${{ github.ref }}
@@ -17,50 +15,45 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-
       - run: pip install -r requirements.txt
       - run: pytest
 
-  create-pr-and-automerge:
-  if: !startsWith(github.ref_name, 'bot/')
-  needs: test
-  runs-on: ubuntu-latest
-
+  pr-and-automerge:
+    needs: test
+    runs-on: ubuntu-latest
     steps:
-      - name: Create PR from feature -> develop
+      - name: Create/Update PR to develop
         id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: develop
-          head: ${{ github.ref_name }}
           branch: bot/${{ github.ref_name }}-to-develop-${{ github.run_id }}
-          title: Auto PR: ${{ github.ref_name }} -> develop
-          body: Auto-created after tests passed.
+          title: "Auto PR: ${{ github.ref_name }} -> develop"
+          body: "Auto-created after tests passed."
+          commit-message: "chore: auto PR from feature -> develop"
 
-      - name: Enable auto-merge (squash)
+      - name: Enable auto-merge (squash) for PR to develop
         if: steps.cpr.outputs.pull-request-number != ''
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const prNumber = Number('${{ steps.cpr.outputs.pull-request-number }}');
-
             const pr = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: prNumber
             });
 
-            await github.graphql(`
+            await github.graphql(
+              `
               mutation($prId: ID!) {
                 enablePullRequestAutoMerge(input: {
                   pullRequestId: $prId,
@@ -69,4 +62,7 @@ jobs:
                   pullRequest { number }
                 }
               }
-            `, { prId: pr.data.node_id });
+              `,
+              { prId: pr.data.node_id }
+            );
+
