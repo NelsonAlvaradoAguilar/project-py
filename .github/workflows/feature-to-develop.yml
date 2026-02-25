@@ -30,8 +30,9 @@ jobs:
       - run: pytest
 
   create-pr-and-automerge:
-    needs: test
-    runs-on: ubuntu-latest
+  if: !startsWith(github.ref_name, 'bot/')
+  needs: test
+  runs-on: ubuntu-latest
 
     steps:
       - name: Create PR from feature -> develop
