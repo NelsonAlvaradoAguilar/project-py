@@ -3,6 +3,7 @@ name: Feature -> Develop (auto-merge)
 on:
   push:
     branches:
+      - 'feature'
       - 'feature/**'
 
 concurrency:
