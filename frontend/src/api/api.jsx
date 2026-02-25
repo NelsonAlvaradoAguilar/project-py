@@ -6,7 +6,7 @@ export const api = axios.create({
 });
 
 // ---------------------- PEOPLE ----------------------
-
+//nddufwuefgewfgwegbf
 // Fetch all people
 const getPeople = async () => {
   try {
