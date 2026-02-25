@@ -3,21 +3,20 @@ name: Python CI - Feature New
 on:
   push:
     branches:
-      - feature/new # Only triggers on this branch
+      - feature/new # Trigger on feature branch
   pull_request:
     branches:
-      - develop # Optional, also trigger on PRs to this branch
+      - develop # Optional for PRs to develop
 
 jobs:
-  test:
+  test-and-merge:
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         python-version: [3.12]
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -31,5 +30,29 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run tests
+        run: pytest
+
+      - name: Auto merge feature/new into develop
+        if: success() && github.ref == 'refs/heads/feature/new'
+        uses: devops-infra/action-pull-request@v0.5.5
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          source_branch: feature/new
+          target_branch: develop
+          pr_title: "Auto merge feature/new → develop"
+          pr_body: "This PR was created automatically after passing tests."
+
+      - name: Run tests on develop → main PR
+        if: success() && github.ref == 'refs/heads/develop'
         run: |
-          pytest
+          echo "Tests passed on develop. Ready to merge into main."
+
+      - name: Auto merge develop into main
+        if: success() && github.ref == 'refs/heads/develop'
+        uses: devops-infra/action-pull-request@v0.5.5
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          source_branch: develop
+          target_branch: main
+          pr_title: "Auto merge develop → main"
+          pr_body: "This PR was created automatically after passing tests."
