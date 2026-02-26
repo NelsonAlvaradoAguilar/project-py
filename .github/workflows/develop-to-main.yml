@@ -1,4 +1,4 @@
-name: Full CI Pipeline
+name: CI Pipeline
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
       - develop
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read # workflow doesn’t need to create PRs
+  pull-requests: write # for auto-merge if enabled
 
 jobs:
   test:
@@ -27,43 +27,3 @@ jobs:
 
       - name: Run tests
         run: pytest
-
-  feature-to-develop:
-    if: startsWith(github.ref, 'refs/heads/feature/')
-    needs: test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Create PR feature → develop
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: develop
-          title: "Auto: feature → develop"
-          body: "Tests passed on feature branch."
-
-      - name: Enable Auto-Merge
-        uses: peter-evans/enable-pull-request-automerge@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          merge-method: squash
-
-  develop-to-main:
-    if: github.ref == 'refs/heads/develop'
-    needs: test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Create PR develop → main
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: main
-          title: "Auto: develop → main"
-          body: "Tests passed on develop branch."
-
-      - name: Enable Auto-Merge
-        uses: peter-evans/enable-pull-request-automerge@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          merge-method: squash
