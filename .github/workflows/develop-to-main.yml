@@ -1,8 +1,9 @@
-name: Develop → Main CI & Auto Merge
+name: Full CI Pipeline
 
 on:
   push:
     branches:
+      - "feature/**"
       - develop
 
 permissions:
@@ -10,7 +11,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  test-and-merge:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,21 +21,48 @@ jobs:
         with:
           python-version: 3.12
 
-      - run: |
+      - name: Install dependencies
+        run: |
           pip install -r requirements.txt
-          pytest
 
-      - name: Create PR
-        if: success()
+      - name: Run tests
+        run: pytest
+
+  feature-to-develop:
+    if: startsWith(github.ref, 'refs/heads/feature/')
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create PR feature → develop
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: develop
+          title: "Auto: feature → develop"
+          body: "Tests passed on feature branch."
+
+      - name: Enable Auto-Merge
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          merge-method: squash
+
+  develop-to-main:
+    if: github.ref == 'refs/heads/develop'
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create PR develop → main
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: main
-          title: "Auto merge develop → main"
-          body: "Tests passed on develop."
+          title: "Auto: develop → main"
+          body: "Tests passed on develop branch."
 
       - name: Enable Auto-Merge
-        if: success()
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
